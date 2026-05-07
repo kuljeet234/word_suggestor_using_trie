@@ -87,7 +87,7 @@ int main() {
     Trie trie;
 
   
-    string dictionaryFile = "dicionary.txt"; 
+    string dictionaryFile = "dictionary.txt";
     trie.loadDictionaryFromFile(dictionaryFile);
 
  
