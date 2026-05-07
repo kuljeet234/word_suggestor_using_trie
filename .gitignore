@@ -1,0 +1,8 @@
+a.out
+trie
+*.o
+*.dSYM/
+.DS_Store
+
+# Dictionary is fetched by bootstrap.sh, not committed.
+dictionary.txt
