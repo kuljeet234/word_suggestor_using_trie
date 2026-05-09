@@ -1,7 +1,8 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include <fstream> 
+#include <fstream>
+#include <cctype>
 
 using namespace std;
 
@@ -21,16 +22,31 @@ class Trie {
 private:
     TrieNode* root;
 
+    // Lowercase a-z map to 0-25; anything else returns -1 to signal
+    // "not part of our alphabet" so callers can drop the word safely.
+    static int charToIndex(char c) {
+        unsigned char uc = static_cast<unsigned char>(c);
+        if (uc >= 'a' && uc <= 'z') return uc - 'a';
+        if (uc >= 'A' && uc <= 'Z') return uc - 'A';
+        return -1;
+    }
+
 public:
     Trie() {
         root = new TrieNode();
     }
 
-    
+    // Insert a word; skip the entire word if it contains non-alpha
+    // characters (apostrophes, hyphens, accents) — both /usr/share/dict/words
+    // and many community wordlists include those, and the fixed-26 child
+    // array would otherwise be indexed out of bounds.
     void insert(const string& word) {
+        if (word.empty()) return;
+
         TrieNode* node = root;
         for (char c : word) {
-            int index = c - 'a';
+            int index = charToIndex(c);
+            if (index < 0) return;
             if (!node->children[index])
                 node->children[index] = new TrieNode();
             node = node->children[index];
@@ -38,7 +54,6 @@ public:
         node->isEndOfWord = true;
     }
 
-    
     void suggestHelper(TrieNode* node, const string& prefix, vector<string>& suggestions) {
         if (node->isEndOfWord)
             suggestions.push_back(prefix);
@@ -51,21 +66,21 @@ public:
         }
     }
 
-   
     vector<string> getSuggestions(const string& prefix) {
         TrieNode* node = root;
         vector<string> suggestions;
         for (char c : prefix) {
-            int index = c - 'a';
+            int index = charToIndex(c);
+            if (index < 0)
+                return suggestions;
             if (!node->children[index])
-                return suggestions; 
+                return suggestions;
             node = node->children[index];
         }
         suggestHelper(node, prefix, suggestions);
         return suggestions;
     }
 
-   
     void loadDictionaryFromFile(const string& filename) {
         ifstream file(filename);
         if (!file.is_open()) {
@@ -74,12 +89,22 @@ public:
         }
 
         string word;
+        size_t loaded = 0, skipped = 0;
         while (getline(file, word)) {
-            insert(word);
+            if (word.empty()) { skipped++; continue; }
+            // Strip trailing \r (CRLF files) before validation.
+            if (word.back() == '\r') word.pop_back();
+            bool valid = !word.empty();
+            for (char c : word) {
+                if (charToIndex(c) < 0) { valid = false; break; }
+            }
+            if (valid) { insert(word); loaded++; }
+            else { skipped++; }
         }
 
         file.close();
-        cout << "Dictionary loaded from file: " << filename << endl;
+        cout << "Dictionary loaded from " << filename
+             << " (" << loaded << " words, " << skipped << " skipped)" << endl;
     }
 };
 

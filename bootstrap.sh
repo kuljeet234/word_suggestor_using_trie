@@ -14,7 +14,10 @@ fi
 
 if [ -f /usr/share/dict/words ]; then
   echo "Copying /usr/share/dict/words -> $DEST"
-  tr 'A-Z' 'a-z' < /usr/share/dict/words | sort -u > "$DEST"
+  # macOS and Linux ship words with apostrophes/hyphens/accents; the trie
+  # only stores [a-z] so we filter to pure alpha lines before saving.
+  tr 'A-Z' 'a-z' < /usr/share/dict/words | grep -E '^[a-z]+$' | sort -u > "$DEST"
+  echo "Saved $(wc -l < "$DEST") alpha-only words."
   exit 0
 fi
 
